@@ -28,7 +28,6 @@ pipeline {
     }
 
     environment {
-        BUILD_IMAGE_TAG = 'latest'
         BUILD_IMAGE_JOB_STATUS = 'SKIPPED'
     }
 
@@ -54,8 +53,7 @@ pipeline {
                             "https://github.com/${pipelineVars.githubRepositoryOrg}/${pipelineVars.githubRepositoryName}.git",
                             "${pipelineVars.kieToolsBotGithubCredentialsId}"
                         )
-
-                        BUILD_IMAGE_REQUIRED = githubUtils.fileIsInChangeset('incubator-kie-tools-ci-build.Dockerfile')
+                        BUILD_IMAGE_REQUIRED = (BRANCH_NAME != 'main' || githubUtils.fileIsInChangeset('incubator-kie-tools-ci-build.Dockerfile'))
                     }
                 }
             }
@@ -67,12 +65,8 @@ pipeline {
             }
             steps {
                 script {
-                    BUILD_IMAGE_TAG = "${env.GIT_COMMIT}"
                     BUILD_IMAGE_JOB_STATUS = build(
-                        job: "KIE/kie-tools/kie-tools-ci-jobs/kie-tools-ci-image-build/${BRANCH_NAME}",
-                        parameters: [
-                            string(name: 'IMAGE_TAG', value: "${env.GIT_COMMIT}")
-                        ]
+                        job: "KIE/kie-tools/kie-tools-ci-jobs/kie-tools-ci-image-build/${BRANCH_NAME}"
                     ).result
                 }
             }
@@ -87,10 +81,7 @@ pipeline {
                     steps {
                         script {
                             build(
-                                job: "KIE/kie-tools/kie-tools-ci-jobs/kie-tools-ci-build/${BRANCH_NAME}",
-                                parameters: [
-                                    string(name: 'IMAGE_TAG', value: "${BUILD_IMAGE_TAG}")
-                                ]
+                                job: "KIE/kie-tools/kie-tools-ci-jobs/kie-tools-ci-build/${BRANCH_NAME}"
                             )
                         }
                     }
@@ -100,10 +91,7 @@ pipeline {
                     steps {
                         script {
                             build(
-                                job: "KIE/kie-tools/kie-tools-ci-jobs/kie-tools-ci-check-dependencies/${BRANCH_NAME}",
-                                parameters: [
-                                    string(name: 'IMAGE_TAG', value: "${BUILD_IMAGE_TAG}")
-                                ]
+                                job: "KIE/kie-tools/kie-tools-ci-jobs/kie-tools-ci-check-dependencies/${BRANCH_NAME}"
                             )
                         }
                     }
@@ -113,10 +101,7 @@ pipeline {
                     steps {
                         script {
                             build(
-                                job: "KIE/kie-tools/kie-tools-ci-jobs/kie-tools-ci-check-code-formatting/${BRANCH_NAME}",
-                                parameters: [
-                                    string(name: 'IMAGE_TAG', value: "${BUILD_IMAGE_TAG}")
-                                ]
+                                job: "KIE/kie-tools/kie-tools-ci-jobs/kie-tools-ci-check-code-formatting/${BRANCH_NAME}"
                             )
                         }
                     }
@@ -126,10 +111,7 @@ pipeline {
                     steps {
                         script {
                             build(
-                                job: "KIE/kie-tools/kie-tools-ci-jobs/kie-tools-ci-check-code-quality/${BRANCH_NAME}",
-                                parameters: [
-                                    string(name: 'IMAGE_TAG', value: "${BUILD_IMAGE_TAG}")
-                                ]
+                                job: "KIE/kie-tools/kie-tools-ci-jobs/kie-tools-ci-check-code-quality/${BRANCH_NAME}"
                             )
                         }
                     }

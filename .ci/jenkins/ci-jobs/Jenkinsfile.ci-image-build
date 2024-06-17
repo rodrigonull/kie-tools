@@ -17,15 +17,10 @@
 pipeline {
     agent any
 
-    parameters {
-        string(description: 'Image tag', name: 'IMAGE_TAG', defaultValue: 'main')
-    }
-
     environment {
         IMAGE_REGISTRY = 'docker.io'
         IMAGE_ACCOUNT = 'apache'
         IMAGE_NAME = 'incubator-kie-tools-ci-build'
-        IMAGE_NAME_TAG = "${IMAGE_REGISTRY}/${IMAGE_ACCOUNT}/${IMAGE_NAME}:${params.IMAGE_TAG}"
         DOCKER_CONFIG = "${WORKSPACE}/.docker"
     }
 
@@ -67,56 +62,24 @@ pipeline {
             }
         }
 
-        stage('Check image tag already exists') {
-            steps {
-                script {
-                    IMAGE_EXISTS = dockerUtils.checkImageExistsInRegistry(
-                        "${IMAGE_REGISTRY}",
-                        "${IMAGE_ACCOUNT}",
-                        "${IMAGE_NAME}",
-                        "${params.IMAGE_TAG}",
-                        "${pipelineVars.dockerHubUserCredentialsId}",
-                        "${pipelineVars.dockerHubTokenCredentialsId}"
-                    )
-                }
-            }
-        }
-
-        // Trigger by PR = Tag is GIT commit hash and it has expiration = 1d
-        // Trigger by Branch = Tags are GIT commit and latest and they have no expiration
         stage('Build image') {
-            when {
-                expression { !IMAGE_EXISTS }
-            }
             steps {
                 dir('kie-tools') {
                     script {
-                        if (!env.CHANGE_ID && env.BRANCH_NAME == 'main') {
-                            sh """
-                            docker build -t ${IMAGE_NAME_TAG} -f .ci/incubator-kie-tools-ci-build.Dockerfile .
-                            docker tag ${IMAGE_NAME_TAG} ${IMAGE_ACCOUNT}/${IMAGE_NAME}:main
-                            """
-                            IMAGE_TAGS = "${params.IMAGE_TAG} latest"
-                        } else {
-                            sh "docker build -t ${IMAGE_NAME_TAG} -f .ci/incubator-kie-tools-ci-build.Dockerfile ."
-                            IMAGE_TAGS = "${params.IMAGE_TAG}"
-                        }
+                        sh "docker build -t ${IMAGE_REGISTRY}/${IMAGE_ACCOUNT}/${IMAGE_NAME}:${env.BRANCH_NAME} -f .ci/incubator-kie-tools-ci-build.Dockerfile ."
                     }
                 }
             }
         }
 
         stage('Push image to registry') {
-            when {
-                expression { !IMAGE_EXISTS }
-            }
             steps {
                 script {
                     dockerUtils.pushImageToRegistry(
                         "${IMAGE_REGISTRY}",
                         "${IMAGE_ACCOUNT}",
                         "${IMAGE_NAME}",
-                        "${IMAGE_TAGS}",
+                        "${env.BRANCH_NAME}",
                         "${pipelineVars.dockerHubUserCredentialsId}",
                         "${pipelineVars.dockerHubTokenCredentialsId}"
                     )
@@ -127,7 +90,7 @@ pipeline {
         stage('Test built image') {
             agent {
                 docker {
-                    image env.IMAGE_NAME_TAG
+                    image "${IMAGE_REGISTRY}/${IMAGE_ACCOUNT}/${IMAGE_NAME}:${env.BRANCH_NAME}"
                 }
             }
             steps {
