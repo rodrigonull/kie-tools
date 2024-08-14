@@ -19,12 +19,10 @@
 * Setup the GPG Key to sign release artifacts
 */
 def setupSigningKey(String gpgKeyCredentialsId) {
-    withCredentials([string(credentialsId: gpgKeyCredentialsId, variable: 'SIGNING_KEY')]) {
+    withCredentials([file(credentialsId: gpgKeyCredentialsId, variable: 'SIGNING_KEY')]) {
         sh """#!/bin/bash -el
-        echo "${SIGNING_KEY}" > ${WORKSPACE}/signkey.gpg
         gpg --list-keys
-        gpg --batch --pinentry-mode loopback --import ${WORKSPACE}/signkey.gpg
-        rm ${WORKSPACE}/signkey.gpg
+        gpg --batch --pinentry-mode=loopback --import $SIGNING_KEY
         """.trim()
     }
 }
