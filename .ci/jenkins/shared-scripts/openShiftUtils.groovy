@@ -50,7 +50,7 @@ def createOrUpdateApp(String project, String appName, String imageTag, String im
           oc label deployments/${appName} app.openshift.io/runtime=${deploymentIcon}
         else
           echo "App '${appName}' already exists. Update the ImageStream instead."
-          oc tag -d ${appName}:latest
+          oc tag -d ${appName}:latest || true
           oc import-image ${appName}:${imageTag} --from=${imageUrl} --confirm
           oc tag ${appName}:${imageTag} ${appName}:latest
           cat ${deploymentEnvVarsPath} | oc set env deploy/${appName} -
